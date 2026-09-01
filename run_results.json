@@ -1,0 +1,43 @@
+{
+  "dynamic_keys": {
+    "collection": "repos_dynamic_keys",
+    "points": 1000,
+    "distinct_topic_keys": 3685,
+    "indexed_fields_total": 3687,
+    "upsert_seconds": 0.06,
+    "index_build_seconds": 69.5,
+    "total_build_seconds": 69.55,
+    "memory_allocated_bytes": 391184280,
+    "memory_resident_bytes": 521928704,
+    "disk_bytes": 15609424528
+  },
+  "fixed_schema": {
+    "collection": "repos_fixed_schema",
+    "points": 1000,
+    "distinct_topic_keys": null,
+    "indexed_fields_total": 3,
+    "upsert_seconds": 0.04,
+    "index_build_seconds": 0.07,
+    "total_build_seconds": 0.11,
+    "memory_allocated_bytes": 77979720,
+    "memory_resident_bytes": 180486144,
+    "disk_bytes": 159572083
+  },
+  "unindexed_topics": {
+    "collection": "repos_unindexed_topics",
+    "points": 1000,
+    "distinct_topic_keys": null,
+    "indexed_fields_total": 2,
+    "upsert_seconds": 0.06,
+    "index_build_seconds": 0.05,
+    "total_build_seconds": 0.1,
+    "memory_allocated_bytes": 75125936,
+    "memory_resident_bytes": 178061312,
+    "disk_bytes": 152198670
+  },
+  "query_check": {
+    "sample_topic": "awesome-list",
+    "matches_found": 39,
+    "matches_expected": 39
+  }
+}

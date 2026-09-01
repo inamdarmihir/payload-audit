@@ -1,0 +1,110 @@
+Loaded 1000 real repos from github_repos.json
+Restarting qdrant-audit-test to reset memory baseline...
+
+=== Building repos_dynamic_keys (one payload index per topic key) ===
+Upserted 1000 points in 0.06s
+Creating 3685 individual payload indexes...
+  500/3685 indexes created...
+  1000/3685 indexes created...
+  1500/3685 indexes created...
+  2000/3685 indexes created...
+  2500/3685 indexes created...
+  3000/3685 indexes created...
+  3500/3685 indexes created...
+Waiting 30s for WAL/segment state to settle before measuring disk...
+{
+  "collection": "repos_dynamic_keys",
+  "points": 1000,
+  "distinct_topic_keys": 3685,
+  "indexed_fields_total": 3687,
+  "upsert_seconds": 0.06,
+  "index_build_seconds": 69.5,
+  "total_build_seconds": 69.55,
+  "memory_allocated_bytes": 391184280,
+  "memory_resident_bytes": 521928704,
+  "disk_bytes": 15609424528
+}
+Collection: repos_dynamic_keys
+Sampled points: 10000
+Distinct payload keys seen: 3688
+Indexed fields: 3687
+Dynamic-key-to-indexed-field ratio: 1.00
+Unindexed keys: 1
+Lowest-frequency unindexed keys (the schema-sprawl candidates):
+  repo: seen in 1000 of 10000 sampled points
+
+Restarting qdrant-audit-test to reset memory baseline...
+
+=== Building repos_fixed_schema (single indexed `tags` field) ===
+Upserted 1000 points in 0.04s
+Waiting 30s for WAL/segment state to settle before measuring disk...
+{
+  "collection": "repos_fixed_schema",
+  "points": 1000,
+  "distinct_topic_keys": null,
+  "indexed_fields_total": 3,
+  "upsert_seconds": 0.04,
+  "index_build_seconds": 0.07,
+  "total_build_seconds": 0.11,
+  "memory_allocated_bytes": 77979720,
+  "memory_resident_bytes": 180486144,
+  "disk_bytes": 159572083
+}
+Collection: repos_fixed_schema
+Sampled points: 10000
+Distinct payload keys seen: 4
+Indexed fields: 3
+Dynamic-key-to-indexed-field ratio: 1.33
+Unindexed keys: 1
+Lowest-frequency unindexed keys (the schema-sprawl candidates):
+  repo: seen in 1000 of 10000 sampled points
+
+
+Query correctness check (MatchAny on `tags`): {'sample_topic': 'awesome-list', 'matches_found': 39, 'matches_expected': 39}
+Restarting qdrant-audit-test to reset memory baseline...
+
+=== Building repos_unindexed_topics (dynamic keys present, none indexed) ===
+Upserted 1000 points in 0.06s
+Waiting 30s for WAL/segment state to settle before measuring disk...
+{
+  "collection": "repos_unindexed_topics",
+  "points": 1000,
+  "distinct_topic_keys": null,
+  "indexed_fields_total": 2,
+  "upsert_seconds": 0.06,
+  "index_build_seconds": 0.05,
+  "total_build_seconds": 0.1,
+  "memory_allocated_bytes": 75125936,
+  "memory_resident_bytes": 178061312,
+  "disk_bytes": 152198670
+}
+Collection: repos_unindexed_topics
+Sampled points: 10000
+Distinct payload keys seen: 3688
+Indexed fields: 2
+Dynamic-key-to-indexed-field ratio: 1844.00
+Unindexed keys: 3686
+Lowest-frequency unindexed keys (the schema-sprawl candidates):
+  topic_no_code_platform: seen in 1 of 10000 sampled points
+  topic_semantic_parsing: seen in 1 of 10000 sampled points
+  topic_data_integration: seen in 1 of 10000 sampled points
+  topic_embedding_store: seen in 1 of 10000 sampled points
+  topic_integrations: seen in 1 of 10000 sampled points
+  topic_ai_sandboxes: seen in 1 of 10000 sampled points
+  topic_data_flow_diagram: seen in 1 of 10000 sampled points
+  topic_hmr: seen in 1 of 10000 sampled points
+  topic_google_coral: seen in 1 of 10000 sampled points
+  topic_perplexica: seen in 1 of 10000 sampled points
+  topic_javascript_library: seen in 1 of 10000 sampled points
+  topic_pdf_editor: seen in 1 of 10000 sampled points
+  topic_web_application_framework: seen in 1 of 10000 sampled points
+  topic_auto: seen in 1 of 10000 sampled points
+  topic_beginners_friendly: seen in 1 of 10000 sampled points
+  topic_vaultwarden: seen in 1 of 10000 sampled points
+  topic_dynamic: seen in 1 of 10000 sampled points
+  topic_painless_javascript_testing: seen in 1 of 10000 sampled points
+  topic_medusa: seen in 1 of 10000 sampled points
+  topic_typescript_parser: seen in 1 of 10000 sampled points
+
+
+Results written to /Users/apple/Downloads/repos-final/qdrant-payload-audit/run_results.json

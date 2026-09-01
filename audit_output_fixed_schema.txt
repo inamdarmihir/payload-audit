@@ -1,0 +1,8 @@
+Collection: repos_fixed_schema
+Sampled points: 10000
+Distinct payload keys seen: 4
+Indexed fields: 3
+Dynamic-key-to-indexed-field ratio: 1.33
+Unindexed keys: 1
+Lowest-frequency unindexed keys (the schema-sprawl candidates):
+  repo: seen in 1000 of 10000 sampled points

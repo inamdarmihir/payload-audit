@@ -1,0 +1,8 @@
+Collection: repos_dynamic_keys
+Sampled points: 10000
+Distinct payload keys seen: 3688
+Indexed fields: 3687
+Dynamic-key-to-indexed-field ratio: 1.00
+Unindexed keys: 1
+Lowest-frequency unindexed keys (the schema-sprawl candidates):
+  repo: seen in 1000 of 10000 sampled points
