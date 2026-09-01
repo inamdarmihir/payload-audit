@@ -3,8 +3,8 @@ build_collections.py
 
 Builds two collections from the same real GitHub dataset (github_repos.json,
 produced by fetch_dataset.py) against a real local Qdrant server, to measure
-the actual before/after cost of Dylan Couzon's dynamic-payload-key
-anti-pattern rather than assume his numbers hold at a different scale.
+the actual before/after cost of the dynamic-payload-key
+anti-pattern rather than assume the original numbers hold at a different scale.
 
 Deviation from the original plan, disclosed here: the task called for
 Qdrant's embedded/local mode (QdrantClient(path=...) or :memory:), no
@@ -14,7 +14,7 @@ payload index against a local-mode client prints
 Qdrant if you need payload indexes." Local mode's indexes are a no-op, so
 both collections would measure identically and the whole comparison would
 be fabricated. A real Qdrant server (`docker run qdrant/qdrant`) is used
-instead, which is also what Dylan Couzon's original numbers were measured
+instead, which is also what the original benchmark's numbers were measured
 against.
 
 Two collections, same 1000 real repos, same vectors, same `language` and

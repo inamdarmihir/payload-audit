@@ -3,9 +3,9 @@ fetch_dataset.py
 
 Fetches real repository data from GitHub's search API (via the authenticated
 `gh api` CLI) and reshapes it into two payload structures over the same
-underlying data, to reproduce Dylan Couzon's dynamic-payload-key finding:
+underlying data, to reproduce a published dynamic-payload-key finding:
 
-  https://qdrant.tech (Dylan Couzon, Qdrant DevRel) found that a 10,000-point
+  https://qdrant.tech (Qdrant DevRel) found that a 10,000-point
   collection with 1,000 dynamic, user-defined payload keys, each given its
   own payload index, added 1.2 GB and took 63 seconds to build. Reshaping
   into two fixed key-value fields with a nested filter cut that to 24 MB
@@ -13,7 +13,7 @@ underlying data, to reproduce Dylan Couzon's dynamic-payload-key finding:
 
 Where the data comes from: GitHub's public "topics" array on each repo is a
 real, sparse, long-tail, user-assigned tag set, genuinely the kind of
-end-user-shaped metadata Dylan's finding is about. It is not fabricated data.
+end-user-shaped metadata the finding is about. It is not fabricated data.
 It IS reshaped deliberately: this script turns each repo's topic list into
 one boolean payload key per topic (`topic_<name>: true`) to reproduce the
 specific "one index per dynamic key" shape the audit tool needs to catch,

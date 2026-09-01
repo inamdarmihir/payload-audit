@@ -17,7 +17,7 @@ fields that have an explicit index. It says nothing about the other keys
 actually present in the stored payloads, the dynamic, unindexed ones that
 are the whole point of this audit. Finding those means sampling real
 points and collecting the payload keys that show up, which is exactly
-what Dylan Couzon's original finding (Qdrant DevRel) was about: schema
+what the original Qdrant DevRel finding was about: schema
 sprawl that Qdrant's collection metadata alone doesn't surface. See
 README.md for the numbers from an actual run of this tool.
 """
@@ -89,7 +89,7 @@ def audit(client: QdrantClient, collection_name: str, sample_size: int = 10_000)
         "indexed_fields": sorted(indexed_fields),
         "dynamic_key_to_indexed_field_ratio": ratio,
         # Named low-frequency unindexed keys, the specific pattern from
-        # Dylan Couzon's finding: sparse, user-shaped keys, not a handful
+        # the original finding: sparse, user-shaped keys, not a handful
         # of high-traffic fields that just haven't been indexed yet.
         "unindexed_keys_by_frequency": sorted(
             ((key, key_counts[key]) for key in unindexed_keys),
