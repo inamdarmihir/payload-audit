@@ -1,6 +1,6 @@
 # qdrant-payload-audit
 
-A internal DevRel benchmark found that giving 1,000 dynamic, user-defined
+A published Qdrant benchmark found that giving 1,000 dynamic, user-defined
 payload keys their own index each, instead of storing them as values inside
 one fixed field, added 1.2 GB and 63 seconds to a 10,000-point collection.
 Reshaping into two fixed key-value fields cut that to 24 MB and 0.2 seconds.
@@ -162,8 +162,8 @@ count, not segment count.
 ## Limitations
 
 Numbers are from one run on one machine (macOS, Docker Desktop, default
-Qdrant resource limits) against a 1,000-point sample. The original DevRel
-finding was at 10,000 points; this repo didn't scale to that size
+Qdrant resource limits) against a 1,000-point sample. The original
+benchmark was at 10,000 points; this repo didn't scale to that size
 because building 3,685 real payload indexes at 1,000 points already took
 70 seconds and 15.6 GB, and confirming the same *shape* of finding at a
 different scale was the goal, not reproducing the original benchmark's

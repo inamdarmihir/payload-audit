@@ -17,7 +17,7 @@ fields that have an explicit index. It says nothing about the other keys
 actually present in the stored payloads, the dynamic, unindexed ones that
 are the whole point of this audit. Finding those means sampling real
 points and collecting the payload keys that show up, which is exactly
-what the original Qdrant DevRel finding was about: schema
+what the original published finding was about: schema
 sprawl that Qdrant's collection metadata alone doesn't surface. See
 README.md for the numbers from an actual run of this tool.
 """

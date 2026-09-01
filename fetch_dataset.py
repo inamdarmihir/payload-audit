@@ -5,7 +5,7 @@ Fetches real repository data from GitHub's search API (via the authenticated
 `gh api` CLI) and reshapes it into two payload structures over the same
 underlying data, to reproduce a published dynamic-payload-key finding:
 
-  https://qdrant.tech (Qdrant DevRel) found that a 10,000-point
+  https://qdrant.tech found that a 10,000-point
   collection with 1,000 dynamic, user-defined payload keys, each given its
   own payload index, added 1.2 GB and took 63 seconds to build. Reshaping
   into two fixed key-value fields with a nested filter cut that to 24 MB
