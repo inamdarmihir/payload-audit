@@ -1,4 +1,4 @@
-# qdrant-payload-audit
+# payload-audit
 
 A published Qdrant benchmark found that giving 1,000 dynamic, user-defined
 payload keys their own index each, instead of storing them as values inside
