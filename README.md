@@ -94,6 +94,45 @@ against each one immediately after building it. This is the actual script
 that produced every number in this README; running it end to end
 reproduces the table above.
 
+## Using this on your own collection
+
+No setup beyond installing the one dependency (`qdrant-client`) and
+pointing it at a real Qdrant server:
+
+```bash
+pip install -r requirements.txt
+python3 qdrant_payload_audit.py your_collection_name --url http://localhost:6333
+```
+
+That's the whole tool. It's read-only (`get_collection()` + `scroll()`),
+safe to run against production, and doesn't need `github_repos.json` or
+`build_collections.py` at all, those only exist to reproduce this README's
+benchmark numbers.
+
+To wire it into your own script or a CI/pre-deploy check instead of running
+it as a CLI, import `audit()` directly:
+
+```python
+from qdrant_client import QdrantClient
+from qdrant_payload_audit import audit
+
+client = QdrantClient(url="http://localhost:6333")
+report = audit(client, collection_name="your_collection_name", sample_size=10_000)
+
+if report["dynamic_key_to_indexed_field_ratio"] > 5:
+    raise SystemExit(f"schema sprawl: {report['dynamic_key_to_indexed_field_ratio']:.1f}x")
+```
+
+`report` is a plain dict (`distinct_keys_seen`, `indexed_fields`,
+`dynamic_key_to_indexed_field_ratio`, `unindexed_keys_by_frequency`), so
+any threshold or alert logic can read off it directly. Two things worth
+knowing before relying on it: it only works against a real Qdrant server,
+payload indexes are a no-op in embedded/local-mode `QdrantClient(path=...)`
+so an audit there would be meaningless; and the default 10,000-point
+sample is a practical default for large collections, not a full scan, pass
+`sample_size` (or `--sample-size` on the CLI) higher for an exhaustive
+check on a collection small enough to afford it.
+
 ## Verified, not just written
 
 Two real things broke while building this, both left in because they're
@@ -127,7 +166,8 @@ Qdrant resource limits) against a 1,000-point sample. The original DevRel
 finding was at 10,000 points; this repo didn't scale to that size
 because building 3,685 real payload indexes at 1,000 points already took
 70 seconds and 15.6 GB, and confirming the same *shape* of finding at a
-different scale was the goal, not reproducing his exact numbers. The audit
+different scale was the goal, not reproducing the original benchmark's
+exact numbers. The audit
 tool's 10,000-point sample size is also a default, not a hard limit: pass
 `--sample-size` for a full scan on collections small enough to afford it.
 
