@@ -1,6 +1,6 @@
 # qdrant-payload-audit
 
-A Qdrant DevRel benchmark found that giving 1,000 dynamic, user-defined
+A internal DevRel benchmark found that giving 1,000 dynamic, user-defined
 payload keys their own index each, instead of storing them as values inside
 one fixed field, added 1.2 GB and 63 seconds to a 10,000-point collection.
 Reshaping into two fixed key-value fields cut that to 24 MB and 0.2 seconds.
