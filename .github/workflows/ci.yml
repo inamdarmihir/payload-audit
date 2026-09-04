@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package + dev dependencies
+        run: pip install -e ".[dev]"
+      - name: Run unit tests (mocked client, no live Qdrant needed)
+        run: pytest -q
+
+  schema-sprawl-smoke-test:
+    # Demonstrates the exact use case from the README's "CI / pre-deploy
+    # check" section: build a tiny collection with unindexed dynamic
+    # payload keys, then fail the job via `--max-ratio` when the audit
+    # finds more sprawl than the threshold allows. This is a cheap,
+    # few-point smoke test, not a re-run of the disk/memory benchmark in
+    # run_results.json (see build_collections.py for that).
+    runs-on: ubuntu-latest
+    services:
+      qdrant:
+        image: qdrant/qdrant:latest
+        ports:
+          - 6333:6333
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: pip install -e .
+
+      - name: Wait for Qdrant
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:6333/readyz && exit 0
+            sleep 1
+          done
+          echo "Qdrant did not become ready" && exit 1
+
+      - name: Seed a small collection with unindexed dynamic keys
+        run: |
+          python3 - <<'PY'
+          from qdrant_client import QdrantClient
+          from qdrant_client.models import Distance, VectorParams, PayloadSchemaType
+
+          client = QdrantClient(url="http://localhost:6333")
+          client.create_collection(
+              "ci_schema_sprawl_demo",
+              vectors_config=VectorParams(size=4, distance=Distance.COSINE),
+          )
+          # Only `language` gets an index. `topic_*` are dynamic,
+          # unindexed keys, one per point, the anti-pattern this repo is about.
+          client.create_payload_index("ci_schema_sprawl_demo", "language", PayloadSchemaType.KEYWORD)
+          client.upsert(
+              "ci_schema_sprawl_demo",
+              points=[
+                  {"id": i, "vector": [0.1, 0.2, 0.3, 0.4], "payload": {"language": "python", f"topic_{i}": True}}
+                  for i in range(20)
+              ],
+          )
+          PY
+
+      - name: Audit should FAIL when the ratio exceeds the threshold
+        # 20 dynamic topic_* keys + language = 21 distinct keys seen over
+        # 1 indexed field, a ratio of 21 -- well above a --max-ratio of 3.
+        # `!` inverts the expected non-zero exit so the step (and the
+        # smoke test) passes when the audit correctly fails.
+        run: |
+          ! qdrant-payload-audit ci_schema_sprawl_demo --max-ratio 3
+
+      - name: Audit should PASS once the dynamic keys are indexed too
+        run: |
+          python3 - <<'PY'
+          from qdrant_client import QdrantClient
+          from qdrant_client.models import PayloadSchemaType
+
+          client = QdrantClient(url="http://localhost:6333")
+          for i in range(20):
+              client.create_payload_index("ci_schema_sprawl_demo", f"topic_{i}", PayloadSchemaType.BOOL)
+          PY
+          qdrant-payload-audit ci_schema_sprawl_demo --max-ratio 3

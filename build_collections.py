@@ -288,7 +288,7 @@ def verify_fixed_schema_query(repos: list[dict]) -> dict:
 
 
 def run_audit_and_save(name: str) -> None:
-    """Runs qdrant_payload_audit.py's own audit() against a just-built
+    """Runs the qdrant_payload_audit package's own audit() against a just-built
     collection and writes the same plain-text report the CLI would print,
     so the committed audit_output_*.txt files are reproduced by this
     script rather than being a separate, undocumented step."""

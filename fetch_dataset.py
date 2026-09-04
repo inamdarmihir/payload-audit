@@ -23,9 +23,8 @@ here and in the README, not hidden.
 Run as a script to fetch and checkpoint the dataset:
     python3 fetch_dataset.py fetch
 
-Then build the two comparison collections against a real local Qdrant
-server (see build_collections.py):
-    python3 fetch_dataset.py build
+Then build the three comparison collections against a real Qdrant server:
+    python3 build_collections.py
 """
 
 import json
