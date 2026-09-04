@@ -1,5 +1,5 @@
 """
-qdrant_payload_audit.py
+qdrant_payload_audit
 
 Connects to a real Qdrant collection, computes the ratio of distinct
 payload keys actually present in the data to the number of fields that
@@ -22,10 +22,18 @@ sprawl that Qdrant's collection metadata alone doesn't surface. See
 README.md for the numbers from an actual run of this tool.
 """
 
-import argparse
 from collections import Counter
 
 from qdrant_client import QdrantClient
+
+__version__ = "0.1.0"
+
+__all__ = [
+    "audit",
+    "get_indexed_fields",
+    "sample_payload_keys",
+    "__version__",
+]
 
 
 def get_indexed_fields(client: QdrantClient, collection_name: str) -> set[str]:
@@ -74,6 +82,18 @@ def sample_payload_keys(
 
 
 def audit(client: QdrantClient, collection_name: str, sample_size: int = 10_000) -> dict:
+    """
+    Runs the full audit against a live collection: diffs the payload
+    keys actually present in a sample of real points against the fields
+    that `get_collection()` reports as indexed, and returns a plain dict
+    report (safe to json.dumps, log, or assert on directly in a script or
+    CI check).
+
+    Read-only: only calls `get_collection()` and `scroll()`, safe to run
+    against a production collection. Requires a real Qdrant server;
+    payload indexes are a no-op in embedded/local-mode
+    `QdrantClient(path=...)`, so an audit there would be meaningless.
+    """
     indexed_fields = get_indexed_fields(client, collection_name)
     key_counts = sample_payload_keys(client, collection_name, sample_size=sample_size)
 
@@ -96,24 +116,3 @@ def audit(client: QdrantClient, collection_name: str, sample_size: int = 10_000)
             key=lambda item: item[1],
         ),
     }
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("collection_name", help="Name of the Qdrant collection to audit")
-    parser.add_argument("--url", default="http://localhost:6333", help="Qdrant server URL")
-    parser.add_argument("--sample-size", type=int, default=10_000)
-    args = parser.parse_args()
-
-    client = QdrantClient(url=args.url)
-    report = audit(client, collection_name=args.collection_name, sample_size=args.sample_size)
-
-    print(f"Collection: {report['collection_name']}")
-    print(f"Sampled points: {report['sample_size']}")
-    print(f"Distinct payload keys seen: {report['distinct_keys_seen']}")
-    print(f"Indexed fields: {len(report['indexed_fields'])}")
-    print(f"Dynamic-key-to-indexed-field ratio: {report['dynamic_key_to_indexed_field_ratio']:.2f}")
-    print(f"Unindexed keys: {len(report['unindexed_keys_by_frequency'])}")
-    print("Lowest-frequency unindexed keys (the schema-sprawl candidates):")
-    for key, count in report["unindexed_keys_by_frequency"][:20]:
-        print(f"  {key}: seen in {count} of {report['sample_size']} sampled points")

@@ -1,1 +1,5 @@
+# Mirrors the pin in pyproject.toml. Prefer `pip install -e .`, which
+# installs this same pin plus the `qdrant-payload-audit` console script;
+# this file exists for anyone who wants the dependency alone.
 qdrant-client==1.19.0
+
