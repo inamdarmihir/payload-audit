@@ -32,6 +32,7 @@ __all__ = [
     "audit",
     "get_indexed_fields",
     "sample_payload_keys",
+    "scan_payload_keys",
     "__version__",
 ]
 
@@ -45,27 +46,29 @@ def get_indexed_fields(client: QdrantClient, collection_name: str) -> set[str]:
     return set(schema.keys())
 
 
-def sample_payload_keys(
+def scan_payload_keys(
     client: QdrantClient,
     collection_name: str,
     sample_size: int = 10_000,
     page_size: int = 1000,
-) -> Counter:
+) -> tuple[Counter, int]:
     """
-    Pages through up to `sample_size` real points and counts how often
-    each payload key appears. Full-collection scans are the accurate
-    version of this for collections small enough to afford it; sampling
-    is the practical default for anything large, and the sample size
-    used needs to be reported alongside any ratio this produces.
+    Scroll through up to `sample_size` points and count how often each
+    top-level payload key appears.
+
+    Returns `(key_counts, points_scanned)`. `points_scanned` is the number of
+    points actually read, which is smaller than `sample_size` when the
+    collection runs out first. Use it, not `sample_size`, as the denominator
+    when turning key counts into frequencies.
     """
     key_counts: Counter = Counter()
-    seen = 0
+    scanned = 0
     next_offset = None
 
-    while seen < sample_size:
+    while scanned < sample_size:
         points, next_offset = client.scroll(
             collection_name=collection_name,
-            limit=min(page_size, sample_size - seen),
+            limit=min(page_size, sample_size - scanned),
             offset=next_offset,
             with_payload=True,
             with_vectors=False,
@@ -74,11 +77,21 @@ def sample_payload_keys(
             break
         for point in points:
             key_counts.update((point.payload or {}).keys())
-        seen += len(points)
+        scanned += len(points)
         if next_offset is None:
             break  # reached the end of the collection before hitting sample_size
 
-    return key_counts
+    return key_counts, scanned
+
+
+def sample_payload_keys(
+    client: QdrantClient,
+    collection_name: str,
+    sample_size: int = 10_000,
+    page_size: int = 1000,
+) -> Counter:
+    """Like `scan_payload_keys`, but returns only the key counts."""
+    return scan_payload_keys(client, collection_name, sample_size, page_size)[0]
 
 
 def audit(client: QdrantClient, collection_name: str, sample_size: int = 10_000) -> dict:
@@ -95,7 +108,7 @@ def audit(client: QdrantClient, collection_name: str, sample_size: int = 10_000)
     `QdrantClient(path=...)`, so an audit there would be meaningless.
     """
     indexed_fields = get_indexed_fields(client, collection_name)
-    key_counts = sample_payload_keys(client, collection_name, sample_size=sample_size)
+    key_counts, points_scanned = scan_payload_keys(client, collection_name, sample_size=sample_size)
 
     all_keys = set(key_counts.keys())
     unindexed_keys = all_keys - indexed_fields
@@ -104,7 +117,8 @@ def audit(client: QdrantClient, collection_name: str, sample_size: int = 10_000)
 
     return {
         "collection_name": collection_name,
-        "sample_size": sample_size,
+        "sample_size": sample_size,  # requested limit
+        "points_scanned": points_scanned,  # points actually read
         "distinct_keys_seen": len(all_keys),
         "indexed_fields": sorted(indexed_fields),
         "dynamic_key_to_indexed_field_ratio": ratio,

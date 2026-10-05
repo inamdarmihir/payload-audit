@@ -18,9 +18,10 @@ from . import __version__, audit
 
 
 def format_report(report: dict, top_n: int = 20) -> str:
+    scanned = report.get("points_scanned", report["sample_size"])
     lines = [
         f"Collection: {report['collection_name']}",
-        f"Sampled points: {report['sample_size']}",
+        f"Points scanned: {scanned} (limit {report['sample_size']})",
         f"Distinct payload keys seen: {report['distinct_keys_seen']}",
         f"Indexed fields: {len(report['indexed_fields'])}",
         f"Dynamic-key-to-indexed-field ratio: {report['dynamic_key_to_indexed_field_ratio']:.2f}",
@@ -28,7 +29,7 @@ def format_report(report: dict, top_n: int = 20) -> str:
         "Lowest-frequency unindexed keys (the schema-sprawl candidates):",
     ]
     for key, count in report["unindexed_keys_by_frequency"][:top_n]:
-        lines.append(f"  {key}: seen in {count} of {report['sample_size']} sampled points")
+        lines.append(f"  {key}: seen in {count} of {scanned} scanned points")
     return "\n".join(lines)
 
 

@@ -81,6 +81,17 @@ def test_sample_size_caps_points_scanned():
     report = audit(client, "big_collection", sample_size=10)
 
     assert report["sample_size"] == 10
+    assert report["points_scanned"] == 10
+
+
+def test_points_scanned_reports_actual_count_for_small_collections():
+    points = [{"language": "python"} for _ in range(3)]
+    client = FakeQdrantClient(indexed_fields={"language"}, points=points)
+
+    report = audit(client, "small_collection", sample_size=10_000)
+
+    assert report["sample_size"] == 10_000
+    assert report["points_scanned"] == 3
 
 
 def test_cli_parser_accepts_max_ratio_and_json_flags():
@@ -97,6 +108,7 @@ def test_format_report_is_human_readable():
     report = {
         "collection_name": "demo",
         "sample_size": 100,
+        "points_scanned": 40,
         "distinct_keys_seen": 2,
         "indexed_fields": ["language"],
         "dynamic_key_to_indexed_field_ratio": 2.0,
@@ -107,7 +119,8 @@ def test_format_report_is_human_readable():
 
     assert "Collection: demo" in text
     assert "Dynamic-key-to-indexed-field ratio: 2.00" in text
-    assert "topic_x: seen in 1 of 100 sampled points" in text
+    assert "topic_x: seen in 1 of 40 scanned points" in text
+    assert "Points scanned: 40 (limit 100)" in text
 
 
 def test_main_exits_nonzero_when_ratio_exceeds_max_ratio(monkeypatch, capsys):

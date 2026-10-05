@@ -1,48 +1,94 @@
-# 🔬 Qdrant Payload Audit: Find Payload-Key Sprawl That Collection Metadata Cannot Show
+<p align="center">
+  <a href="https://github.com/inamdarmihir/payload-audit">
+    <img src="docs/assets/banner.svg" width="800px" alt="Qdrant Payload Audit: find payload-key sprawl that collection metadata cannot show">
+  </a>
+</p>
 
-> **A read-only audit that compares the payload keys stored in your points with the fields you indexed, plus the experiment behind the 98x disk figure.**
+<p align="center">
+  <a href="#quickstart">Quickstart</a>
+  ·
+  <a href="#results">Results</a>
+  ·
+  <a href="#reproduce-the-storage-experiment">Reproduce</a>
+  ·
+  <a href="#limits">Limits</a>
+  ·
+  <a href="https://aihive.hashnode.dev/qdrant-payload-index-per-key-98x-disk">Article</a>
+</p>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](pyproject.toml)
-[![Last commit](https://img.shields.io/github/last-commit/inamdarmihir/payload-audit)](https://github.com/inamdarmihir/payload-audit/commits/main)
+<p align="center">
+  <a href="https://github.com/inamdarmihir/payload-audit/actions/workflows/ci.yml">
+    <img src="https://github.com/inamdarmihir/payload-audit/actions/workflows/ci.yml/badge.svg" alt="CI">
+  </a>
+  <a href="pyproject.toml">
+    <img src="https://img.shields.io/badge/python-3.9%2B-blue.svg" alt="Python 3.9+">
+  </a>
+  <a href="https://qdrant.tech">
+    <img src="https://img.shields.io/badge/built%20for-Qdrant-dc244c.svg" alt="Built for Qdrant">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT">
+  </a>
+  <a href="https://github.com/inamdarmihir/payload-audit/commits/main">
+    <img src="https://img.shields.io/github/last-commit/inamdarmihir/payload-audit" alt="Last commit">
+  </a>
+</p>
 
----
+# Qdrant Payload Audit
 
-## 🚀 What Is This?
+A collection can hold thousands of stored payload keys and only two indexed fields. `payload_schema` describes indexes, not the keys in your data, so `get_collection()` cannot show the sprawl. **Payload Audit scrolls stored points, counts the keys it finds and compares them with the indexed schema.** It only reads, so it is safe to point at a live collection.
 
-A collection can have thousands of stored payload keys and only two indexed fields. `payload_schema` describes indexes, not every key in your data. This read-only audit scrolls stored points, counts the keys it sees and compares them with the indexed schema.
+This repo also ships the experiment behind the headline number. Indexing every GitHub topic as its own field (1,000 repositories, 3,685 distinct topics) used **about 98x the disk** of a fixed `tags` array.
 
-The companion experiment measures the storage cost of indexing every GitHub topic as a separate field. Across 1,000 repositories and 3,685 distinct topics, that shape used about 98 times the disk of a fixed `tags` array in the committed run.
+| | |
+| --- | --- |
+| **Read-only** | Only calls `get_collection()` and `scroll()`. Never creates indexes or modifies points. |
+| **CI-ready** | `--max-ratio` returns a non-zero exit code so a pipeline can fail on schema sprawl. |
+| **Scriptable** | Plain-dict Python API and `--json` output. |
+| **Measured** | The 98x claim comes from a committed run on a real Qdrant server, with raw outputs included. |
 
-[Quickstart](#-quick-start) · [Results](#-results) · [Reproduce](#-reproduce-the-storage-experiment) · [Limits](#-limits) · [Article](https://aihive.hashnode.dev/qdrant-payload-index-per-key-98x-disk)
+## Contents
 
----
+- [Quickstart](#quickstart)
+- [How it works](#how-it-works)
+- [Usage](#usage)
+- [Results](#results)
+- [Reproduce the storage experiment](#reproduce-the-storage-experiment)
+- [Repository layout](#repository-layout)
+- [Limits](#limits)
+- [Development](#development)
+- [License](#license)
 
-## ⚡ Quick Start
+## Quickstart
 
-Python 3.9+ and a running Qdrant server are required. Install from the repository; this README does not assume a published PyPI package.
+Requires Python 3.9+ and a running Qdrant server. Install from the repository; no PyPI package is assumed.
 
 ```bash
 git clone https://github.com/inamdarmihir/payload-audit.git
 cd payload-audit
-python3 -m venv .venv
-source .venv/bin/activate
+python3 -m venv .venv && source .venv/bin/activate
 pip install -e .
+
 qdrant-payload-audit your_collection --url http://localhost:6333
 ```
 
-For an authenticated server, set `QDRANT_API_KEY` in your environment. Do not put credentials in committed files.
+Excerpt from a real run on the committed experiment (`repos_unindexed_topics`, full report in [`audit_output_unindexed_topics.txt`](audit_output_unindexed_topics.txt)):
 
-```bash
-qdrant-payload-audit your_collection --sample-size 10000 --json
-qdrant-payload-audit your_collection --max-ratio 5
+```text
+Collection: repos_unindexed_topics
+...
+Distinct payload keys seen: 3688
+Indexed fields: 2
+Dynamic-key-to-indexed-field ratio: 1844.00
+Unindexed keys: 3686
+Lowest-frequency unindexed keys (the schema-sprawl candidates):
+  topic_no_code_platform: seen in 1 of 1000 scanned points
+  topic_semantic_parsing: seen in 1 of 1000 scanned points
 ```
 
-`--max-ratio` exits non-zero when the observed key/index ratio exceeds your threshold. Five is an example policy, not a universal safe limit. The audit only calls `get_collection()` and `scroll()`; it does not create indexes or change points. Large scans still put read load on the server.
+For an authenticated server, set `QDRANT_API_KEY` (or `QDRANT_URL`) in your environment. Do not put credentials in committed files.
 
----
-
-## 🧠 How It Works
+## How it works
 
 ```text
 collection metadata -> indexed field names
@@ -55,7 +101,27 @@ stored point scroll -> observed top-level payload keys
 
 The ratio is **all distinct observed payload keys / indexed fields**, not just unindexed keys. With no indexed fields it is infinite. A high ratio is a signal to inspect the schema, not proof that every key should be indexed.
 
-Python use:
+## Usage
+
+### Command line
+
+```bash
+qdrant-payload-audit your_collection --sample-size 10000 --json
+qdrant-payload-audit your_collection --max-ratio 5
+```
+
+| Flag | Default | Meaning |
+| --- | --- | --- |
+| `collection_name` | required | Collection to audit |
+| `--url` | `$QDRANT_URL` or `http://localhost:6333` | Qdrant server |
+| `--api-key` | `$QDRANT_API_KEY` | API key, for example for Qdrant Cloud |
+| `--sample-size` | `10000` | Maximum number of points to scroll |
+| `--max-ratio` | off | Exit with status 1 when the key/index ratio exceeds this value |
+| `--json` | off | Print the raw report instead of the summary |
+
+`--max-ratio 5` is an example policy, not a universal safe limit. Large scans still put read load on the server. You can also run the tool without installing it, via `python3 -m qdrant_payload_audit`.
+
+### Python
 
 ```python
 from qdrant_client import QdrantClient
@@ -63,14 +129,20 @@ from qdrant_payload_audit import audit
 
 client = QdrantClient(url="http://localhost:6333")
 report = audit(client, collection_name="your_collection", sample_size=10_000)
-print(report["unindexed_keys_by_frequency"])
+
+print(report["points_scanned"])                # points actually read
+print(report["unindexed_keys_by_frequency"])   # [(key, count), ...] rarest first
 ```
 
----
+Report fields: `collection_name`, `sample_size` (the requested limit), `points_scanned` (points actually read), `distinct_keys_seen`, `indexed_fields`, `dynamic_key_to_indexed_field_ratio`, `unindexed_keys_by_frequency`.
 
-## 📊 Results
+### As a CI gate
 
-Same 1,000 GitHub repositories and seeded random vector fixtures in each collection. `language` and `stars` indexes stay constant; topic payload shape and topic indexing change. These are **storage fixtures, not semantic embeddings**, and this is not a search-quality benchmark.
+The [CI workflow](.github/workflows/ci.yml) seeds a small collection with unindexed dynamic keys, asserts that the audit fails on it, indexes the keys, then asserts that it passes. Copy that job to gate your own deploys.
+
+## Results
+
+Same 1,000 GitHub repositories and seeded random vector fixtures in each collection. The `language` and `stars` indexes stay constant; topic payload shape and topic indexing change. These are **storage fixtures, not semantic embeddings**, and this is not a search-quality benchmark.
 
 | Topic representation | Indexed fields | Index build | Disk bytes | Resident memory bytes |
 | --- | ---: | ---: | ---: | ---: |
@@ -84,11 +156,10 @@ The 3,685 topic names are distinct across the dataset, not present on every repo
 
 Measurements used a real Qdrant Docker server on a macOS host, one configured segment, container restarts between conditions and a 30-second settle before disk measurement. Disk comes from `du -sb` in the container; memory comes from the server's `/metrics` endpoint. The server image is unpinned, so a new run may differ.
 
----
+## Reproduce the storage experiment
 
-## 🔬 Reproduce the Storage Experiment
-
-**Use a disposable server.** This path creates and deletes benchmark collections, restarts its named Docker container and can consume more than 15 GB of disk. It is separate from the read-only audit.
+> [!WARNING]
+> **Use a disposable server.** This path creates and deletes benchmark collections, restarts its named Docker container and can consume more than 15 GB of disk. It is separate from the read-only audit.
 
 ```bash
 # From the checkout, with the virtual environment active:
@@ -98,38 +169,35 @@ python3 build_collections.py
 
 The committed [`github_repos.json`](github_repos.json) is the input snapshot. No GitHub authentication is needed to use it. Optional refetching with `python3 fetch_dataset.py fetch` requires an authenticated `gh` CLI and changes the dataset.
 
----
+## Repository layout
 
-## 🗂️ Inspect the Evidence
-
-| File | Contents |
+| Path | Contents |
 | --- | --- |
-| `run_results.json` | Build times, memory, disk and query check |
-| `full_run_output.txt` | Console output of the experiment |
-| `audit_output_*.txt` | Audit report for each collection |
-| `github_repos.json` | Input repositories and their topic lists |
-| `qdrant_payload_audit/` | Audit library and CLI |
+| `qdrant_payload_audit/` | Audit library (`__init__.py`) and CLI (`cli.py`) |
 | `tests/test_audit.py` | Unit tests using a fake client, not the storage experiment |
+| `build_collections.py`, `fetch_dataset.py` | Storage experiment and its dataset fetcher |
+| `github_repos.json` | Input repositories and their topic lists |
+| `run_results.json` | Build times, memory, disk and query check |
+| `full_run_output.txt`, `audit_output_*.txt` | Console output and the audit report for each collection |
 
----
-
-## ⚠️ Limits
+## Limits
 
 - One dataset and one measured run. Exact disk and timing figures depend on server version, segments, storage and host.
-- The audit scans the first points returned by scrolling up to the requested limit; it is not a random sample and can miss rare keys.
-- **Reporting caveat:** `sample_size` and the CLI's "Sampled points" line currently echo the requested limit, not the actual number read. For a smaller collection, do not interpret that value as an observed count or use it as a frequency denominator.
+- The audit scans the first points returned by scrolling, up to the requested limit. It is not a random sample and can miss rare keys.
 - Only top-level payload keys are counted. Nested payload paths are not exhaustively audited.
 - Embedded/local Qdrant does not provide the server payload-index behavior this experiment requires.
 - Thousands of per-field indexes exhausted file handles during development. The experiment forces one segment in all conditions rather than measuring the default multi-segment layout.
+- The committed `audit_output_*.txt` files were produced before the `points_scanned` field existed, so their "Sampled points" line shows the requested limit (10,000) rather than the 1,000 points actually scanned.
 
----
+## Development
 
-## 🤝 Contributing
+```bash
+pip install -e ".[dev]"
+pytest -q
+```
 
-A useful first fix is reporting the actual scanned-point count. Other changes should include tests for missing indexes, small collections and CLI exit status. Keep storage experiments on real servers, separate from fake-client unit tests.
+Unit tests use a fake client and need no server. Keep storage experiments on real servers, separate from those tests. Changes should include tests for missing indexes, small collections and CLI exit status.
 
----
+## License
 
-## 📄 License
-
-[MIT](LICENSE).
+[MIT](LICENSE). Not affiliated with or endorsed by Qdrant.
