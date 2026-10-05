@@ -52,6 +52,7 @@ This repo also ships the experiment behind the headline number. Indexing every G
 - [Quickstart](#quickstart)
 - [How it works](#how-it-works)
 - [Usage](#usage)
+- [Data and ground truth](#data-and-ground-truth)
 - [Results](#results)
 - [Reproduce the storage experiment](#reproduce-the-storage-experiment)
 - [Repository layout](#repository-layout)
@@ -139,6 +140,21 @@ Report fields: `collection_name`, `sample_size` (the requested limit), `points_s
 ### As a CI gate
 
 The [CI workflow](.github/workflows/ci.yml) seeds a small collection with unindexed dynamic keys, asserts that the audit fails on it, indexes the keys, then asserts that it passes. Copy that job to gate your own deploys.
+
+## Data and ground truth
+
+The experiment uses real repository metadata, and everything it reports is a direct measurement.
+
+| Item | Source | Notes |
+| --- | --- | --- |
+| Input records (1,000 repositories, 3,685 distinct topics) | GitHub [REST search API](https://docs.github.com/en/rest/search/search#search-repositories), query `stars:>1000`, sorted by stars, 10 pages x 100 | Fetched by [`fetch_dataset.py`](fetch_dataset.py) and committed as [`github_repos.json`](github_repos.json) (snapshot first committed 2026-09-01). Topics are user-assigned tags, so the long-tail shape is organic. GitHub's search API caps results at 1,000, which is why the dataset is exactly that size. |
+| Ground truth for the 98x claim | Measured on a real Qdrant server | Disk from `du -sb` inside the container, memory from the server's `/metrics` endpoint, build time from the run. Raw output: [`run_results.json`](run_results.json), [`full_run_output.txt`](full_run_output.txt). |
+| Ground truth for the audit tool | The collection itself | The audit reads stored payloads and the server's own `payload_schema`. There is no external label set. |
+
+**What we transform, and what is not real.**
+- Each repository's topic list is reshaped into one boolean payload key per topic (`topic_<name>: true`), to reproduce the "one index per dynamic key" shape. This transform is ours and is disclosed in `fetch_dataset.py`.
+- The **vectors are seeded random fixtures**, not embeddings. The experiment measures storage cost, not search quality, and makes no retrieval-quality claim.
+- The snapshot is a point in time. Refetching (`python3 fetch_dataset.py fetch`) returns a different set of repositories and different numbers.
 
 ## Results
 
